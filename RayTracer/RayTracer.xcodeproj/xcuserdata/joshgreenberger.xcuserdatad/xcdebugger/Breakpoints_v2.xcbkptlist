@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436670708.107652"
+            timestampString = "436673967.496454"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "332"
-            endingLineNumber = "332"
+            startingLineNumber = "390"
+            endingLineNumber = "390"
             landmarkName = "main (int argc, char ** argv)"
             landmarkType = "7">
          </BreakpointContent>
@@ -26,11 +26,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436670708.107652"
+            timestampString = "436673967.496454"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "319"
-            endingLineNumber = "319"
+            startingLineNumber = "377"
+            endingLineNumber = "377"
             landmarkName = "main (int argc, char ** argv)"
             landmarkType = "7">
          </BreakpointContent>
@@ -42,11 +42,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436671738.052585"
+            timestampString = "436673967.496454"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "160"
-            endingLineNumber = "160"
+            startingLineNumber = "185"
+            endingLineNumber = "185"
             landmarkName = "plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)"
             landmarkType = "7">
          </BreakpointContent>

@@ -67,22 +67,6 @@ struct vector: public point{
     }
 };
 
-struct Ray
-{
-    point origin;
-    vector direction;
-    
-    Ray (point p, vector v){
-        origin = p; direction = v;
-    }
-    
-    bool check_intersection (point p){
-        
-        
-        return false;
-    }
-};
-
 struct Vertex
 {
     double position[3];
@@ -112,6 +96,41 @@ typedef struct _Light
     double color[3];
 } Light;
 
+struct Ray
+{
+    point origin;
+    vector direction;
+    
+    Ray (point p, vector v){
+        origin = p; direction = v;
+    }
+    
+    float check_sphere_intersection (Sphere sphere1){
+        //(x0 + xd t - xc)2 + (y0 + yd t - yc)2 + (z0 + zd t - zc)2 - r2 = 0
+        //Simplifies to at2 + bt + c = 0
+            //a = xd2 + yd2+ zd2 = 1
+            //b = 2(xd(x0-xc)+yd(y0-yc)+zd(z0-zc))
+            //c = (x0-xc)2 + (y0-yc)2 +(z0-zc)2 - r2
+        
+        float b, c;
+        b = 2*((direction.x * (origin.x - sphere1.position[0])) +
+            (direction.y * (origin.y - sphere1.position[1])) +
+            (direction.z * (origin.z - sphere1.position[2])));
+        c = pow(origin.x-sphere1.position[0], 2) + pow(origin.y-sphere1.position[1], 2) + pow(origin.z-sphere1.position[2], 2) - pow(sphere1.radius, 2);
+        
+        //Solve to get t0, t1
+        //t0,1 = (-b +/- sqrt(b2-4c))/2
+        //If t0, t1 > 0, return min (t0, t1)
+        
+        float t0, t1;
+        t0 = (-b + sqrt(pow(b, 2) - 4*c))/2;
+        t1 = (-b - sqrt(pow(b, 2) - 4*c))/2;
+        if (t0 < 0 || t1 < 0)
+            return -1;
+        else
+            return fmin(t0, t1);
+    }
+};
 Triangle triangles[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
@@ -167,10 +186,17 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     Ray r1(screen, direction);
     
     //For every object in the scene
-    //If they intersect
-    if (r1.check_intersection(screen))
-        //Plot Object's Pixel
-        plot_pixel_display(x,y,r,g,b);
+        //Check spheres
+    for (int i = 0; i < num_spheres; i++){
+        //If they intersect
+        if (r1.check_sphere_intersection(spheres[i]) > 0){
+            //Plot Object's Pixel
+            plot_pixel_display(x,y,1.0,0.5,0.0);
+        }
+        else
+            plot_pixel_display(x,y,0.0,0.0,0.0);
+    }
+    
     
    // if(mode == MODE_JPEG)
      //   plot_pixel_jpeg(x,y,r,g,b);
