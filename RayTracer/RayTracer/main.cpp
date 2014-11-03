@@ -12,6 +12,8 @@
 #include "pic.h"
 #include <string.h>
 #include <math.h>
+#include <iostream>
+using namespace std;
 
 #define MAX_TRIANGLES 2000
 #define MAX_SPHERES 10
@@ -182,16 +184,21 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     camera.x = 0; camera.y = 0; camera.z = 0;
     point screen;
     screen.x = x; screen.y = y; screen.z = -2;
-    vector direction = vector::determine_vector(camera, screen);
+    point screen2 = screen;
+    screen2.z = -3;
+    vector direction = vector::determine_vector(screen, screen2);
     Ray r1(screen, direction);
     
+    if (x == 0 && y == 0){
+        
+    }
     //For every object in the scene
         //Check spheres
     for (int i = 0; i < num_spheres; i++){
         //If they intersect
-        if (r1.check_sphere_intersection(spheres[i]) > 0){
+        if (r1.check_sphere_intersection(spheres[i]) >= 0){
             //Plot Object's Pixel
-            plot_pixel_display(x,y,1.0,0.5,0.0);
+            plot_pixel_display(x,y,256.0,0.0,256.0);
         }
         else
             plot_pixel_display(x,y,0.0,0.0,0.0);
@@ -321,6 +328,8 @@ int loadScene(char *argv)
                 exit(0);
             }
             spheres[num_spheres++] = s;
+            spheres[num_spheres-1].position[0] += WIDTH/2;
+            spheres[num_spheres-1].position[1] += HEIGHT/2;
         }
         else if(strcasecmp(type,"light")==0)
         {
