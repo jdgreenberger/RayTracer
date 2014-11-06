@@ -27,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F922CBCB1A089B4000848B3D /* screenfile.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = screenfile.txt; sourceTree = SOURCE_ROOT; };
 		F9698E701A06E5CC008E9EE0 /* RayTracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RayTracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9698E731A06E5CC008E9EE0 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		F9698E7A1A06E650008E9EE0 /* libjpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjpeg.a; path = pic/libjpeg.a; sourceTree = SOURCE_ROOT; };
@@ -77,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				F9698E731A06E5CC008E9EE0 /* main.cpp */,
+				F922CBCB1A089B4000848B3D /* screenfile.txt */,
 				F9698E7E1A06E6A1008E9EE0 /* pic.h */,
 			);
 			path = RayTracer;

@@ -10,12 +10,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436684869.60013"
+            timestampString = "436934512.650732"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "399"
-            endingLineNumber = "399"
-            landmarkName = "main (int argc, char ** argv)"
+            startingLineNumber = "447"
+            endingLineNumber = "447"
+            landmarkName = "loadScene(char *argv)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -26,12 +26,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436684869.60013"
+            timestampString = "436934512.650732"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "386"
-            endingLineNumber = "386"
-            landmarkName = "main (int argc, char ** argv)"
+            startingLineNumber = "434"
+            endingLineNumber = "434"
+            landmarkName = "loadScene(char *argv)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -42,13 +42,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436684795.83338"
+            timestampString = "436934512.650732"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "189"
-            endingLineNumber = "189"
-            landmarkName = "plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)"
-            landmarkType = "7">
+            startingLineNumber = "236"
+            endingLineNumber = "236">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -58,12 +56,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "436684869.60013"
+            timestampString = "436934512.650732"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "199"
-            endingLineNumber = "199"
-            landmarkName = "plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)"
+            startingLineNumber = "246"
+            endingLineNumber = "246"
+            landmarkName = "draw_scene()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

@@ -52,6 +52,10 @@ struct vector: public point{
         return v3;
     }
     
+    static float dot_product (point v1, point v2){
+        return v1.x * v2.x +  v1.y * v2.y +  v1.z * v2.z;
+    }
+    
     void normalize (){
         double vectorLength = sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
         this->x = this->x/vectorLength;
@@ -81,6 +85,14 @@ struct Vertex
 typedef struct _Triangle
 {
     struct Vertex v[3];
+    
+    float compute_area (point p1, point p2, point p3){
+        float a = sqrt(p1.x * p2.x + p1.y * p2.y + p1.z * p2.z);
+        float b = sqrt(p3.x * p2.x + p3.y * p2.y + p3.z * p2.z);
+        float c = sqrt(p1.x * p3.x + p1.y * p3.y + p1.z * p3.z);
+        float s = (a + b + c)/2;
+        return sqrt(s * (s-a) * (s-b) * (s-c));
+    }
 } Triangle;
 
 typedef struct _Sphere
@@ -127,11 +139,92 @@ struct Ray
         float t0, t1;
         t0 = (-b + sqrt(pow(b, 2) - 4*c))/2;
         t1 = (-b - sqrt(pow(b, 2) - 4*c))/2;
-        if (t0 < 0 || t1 < 0)
+        if (t0 < 0 && t1 < 0)
             return -1;
         else
-            return fmin(t0, t1);
+            return fmax(t0, t1);
     }
+    
+    float check_triangle_intersection (Triangle triangle1){
+        //Check if ray intersects triangle plane
+        
+        point p1, p2, p3;
+        p1.x = triangle1.v[0].position[0];
+        p1.y = triangle1.v[0].position[1];
+        p1.z = triangle1.v[0].position[2];
+        p2.x = triangle1.v[1].position[0];
+        p2.y = triangle1.v[1].position[1];
+        p2.z = triangle1.v[1].position[2];
+        p3.x = triangle1.v[2].position[0];
+        p3.y = triangle1.v[2].position[1];
+        p3.z = triangle1.v[2].position[2];
+        
+        vector A, B;
+        A.x = p2.x - p1.x;
+        A.y = p2.y - p1.y;
+        A.z = p2.z - p1.z;
+        B.x = p3.x - p1.x;
+        B.y = p3.y - p1.y;
+        B.z = p3.z - p1.z;
+        
+        //Normal = A x B
+        vector normal = vector::cross_product(A, B);
+        vector d;
+        
+        /*
+         
+         t = n . (v0 - p0) / n . (p1-p0)
+         
+         point t = -(ax0 + by0 + cz0 + d)/ axd + byd + czd =
+         -(n . p0 + d) / n . d
+         
+         if n . d = 0, no intersection
+         if t <= 0 intersection is behind ray origin
+         */
+        
+        point intersection;
+        intersection.x = p1.x - origin.x;
+        intersection.y = p1.y - origin.y;
+        intersection.z = p1.z - origin.z;
+        
+        float t = vector::dot_product(normal, intersection) / (vector::dot_product(normal, direction));
+        
+        intersection.x = p1.x + t*direction.x;
+        intersection.y = p1.x + t*direction.y;
+        intersection.z = p1.x + t*direction.z;
+        
+        /*
+         Project the point and triangle onto a plane
+         • Pick a plane not perpendicular to triangle (such
+         a choice always exists)
+         • x = 0, y = 0, or z = 0
+         2. Then, do the 2D test in the plane, by computing
+         barycentric coordinates (follows next)
+         
+         Now we have 3 points instead of 2
+         • Define 3 barycentric coordinates α, β, γ
+         • p = α p1 + β p2 + γ p3
+         • p inside triangle iff 0 ≤ α, β, γ ≤ 1, α + β + γ = 1
+         • How do we calculate α, β, γ?
+         
+         Coordinates are ratios of triangle areas
+         • Areas in these formulas should be signed
+         - Clockwise (-) or anti-clockwise (+) orientation of the triangle
+         - Important for point-in-triangle test
+         */
+        
+        float alpha,beta,gamma;
+       
+
+        alpha = triangle1.compute_area(intersection, p2, p3) / triangle1.compute_area(p1, p2, p3);
+        beta = triangle1.compute_area(p1, intersection, p3) / triangle1.compute_area(p1, p2, p3);
+        gamma = triangle1.compute_area(p1, p2, intersection) / triangle1.compute_area(p1, p2, p3);
+        if (0 <= alpha && alpha <= 1 && 0 <= beta && beta <= 1 && 0 <= gamma && gamma <= 1)
+            return 1;
+        else
+            return -1;
+    }
+    
 };
 Triangle triangles[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
@@ -189,20 +282,29 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     vector direction = vector::determine_vector(screen, screen2);
     Ray r1(screen, direction);
     
-    if (x == 0 && y == 0){
-        
-    }
+
+    bool intersects = false;
     //For every object in the scene
-        //Check spheres
+    //Check spheres
     for (int i = 0; i < num_spheres; i++){
         //If they intersect
         if (r1.check_sphere_intersection(spheres[i]) >= 0){
             //Plot Object's Pixel
-            plot_pixel_display(x,y,256.0,0.0,256.0);
+            intersects = true;
         }
-        else
-            plot_pixel_display(x,y,0.0,0.0,0.0);
     }
+    //Check Triangles
+    for (int i = 0; i < num_triangles; i++){
+        //If they intersect
+        if (r1.check_triangle_intersection(triangles[i]) >= 0){
+            //Plot Object's Pixel
+            intersects = true;
+        }
+    }
+    if (intersects)
+         plot_pixel_display(x,y,256.0,0.0,0.0);
+    else
+        plot_pixel_display(x,y,0.0,0.0,0.0);
     
     
    // if(mode == MODE_JPEG)
@@ -267,7 +369,7 @@ void parse_shi(FILE*file,double *shi)
 
 int loadScene(char *argv)
 {
-    argv = "/Users/joshgreenberger/Documents/Class Material/Senior/Graphics/assign3/RayTracer/test1.scene";
+    argv = "/Users/joshgreenberger/Documents/Class Material/Senior/Graphics/assign3/RayTracer/screenfile.txt";
     FILE *file = fopen(argv,"r");
     if (file == NULL) {
         printf ("Can't open file.\n");
@@ -328,8 +430,9 @@ int loadScene(char *argv)
                 exit(0);
             }
             spheres[num_spheres++] = s;
-            spheres[num_spheres-1].position[0] += WIDTH/2;
+            spheres[num_spheres-1].position[0] += WIDTH/2;  //set to center of screen
             spheres[num_spheres-1].position[1] += HEIGHT/2;
+            spheres[num_spheres-1].radius *= 50;        //set size to screen
         }
         else if(strcasecmp(type,"light")==0)
         {

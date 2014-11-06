@@ -59,12 +59,12 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "$(SRCROOT)/test1.scene"
-            isEnabled = "NO">
+            argument = "$(SRCROOT)/screenfile.txt"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/joshgreenberger/Documents/Class Material/Senior/Graphics/assign3/RayTracer/test1.scene"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
