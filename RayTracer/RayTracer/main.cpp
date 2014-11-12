@@ -222,10 +222,7 @@ struct Ray
          t = - (P0 .  N + d) / (V . n)
          
          t = n . (v0 - p0) / n . (p1-p0)
-         
-         point t = -(ax0 + by0 + cz0 + d)/ axd + byd + czd =
-         -(n . p0 + d) / n . d
-         
+        
          if n . d = 0, no intersection
          if t <= 0 intersection is behind ray origin
         */
@@ -233,7 +230,8 @@ struct Ray
         if (vector::dot_product(normal, direction) == 0)
             return -1;
         
-        float t = (vector::dot_product(origin, normal) + d) / (vector::dot_product(normal, direction));
+        //float t = (vector::dot_product(normal, origin) + d) / (vector::dot_product(normal, direction));
+        float t = vector::dot_product(normal, A-origin) / vector::dot_product(normal, direction);
         
         if (t < 0)
             return -1;
@@ -326,8 +324,12 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     point screen(scaleX - (2 * xVal * scaleX), scaleY - (2 * yVal * scaleY), -1);
     point screen2 = screen;
     screen2.z = -3;
-    vector direction = vector::determine_vector(screen, screen2);
+    vector direction = vector::determine_vector(camera, screen);
     Ray r1(screen, direction);
+    
+    if (screen.x > -0.5 && screen.y > 0.5){
+        
+    }
 
     bool intersects = false;
     //For every object in the scene
