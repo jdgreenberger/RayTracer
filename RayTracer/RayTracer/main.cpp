@@ -3,39 +3,6 @@
  Assignment 3 Raytracer
  
  Name: <Your name here>
- 
- triangle
- pos: -10 -1.05 -12
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.1 0.1 0.1
- shi: 1
- pos: -10 -4.2 8
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.1 0.1 0.1
- shi: 1
- pos: 10 -1.05 -12
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.1 0.1 0.1
- shi: 1
- triangle
- pos: 10 -1.05 -12
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.1 0.1 0.1
- shi: 1
- pos: -10 -4.2 8
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.1 0.1 0.1
- shi: 1
- pos: 10 -4.2 8
- nor: 0 0.9878    0.1556
- dif: 0 0.3 0
- spe: 0.5 0.5 0.5
- shi: 1
  */
 
 #include <stdlib.h>
@@ -67,6 +34,10 @@ int mode=MODE_DISPLAY;
 #define fov 60.0
 
 unsigned char buffer[HEIGHT][WIDTH][3];
+
+struct color {
+    float rgb [3] = {0.0, 0.0, 0.0};
+};
 
 struct point {
     double x;
@@ -128,7 +99,7 @@ struct point {
         cout << "X = " << x << " Y = " << y << " Z = " << z << endl;
         cout.flush();
     }
-  
+    
 };
 
 typedef point vector;
@@ -167,6 +138,15 @@ typedef struct _Light
     double color[3];
 } Light;
 
+Triangle triangles[MAX_TRIANGLES];
+Sphere spheres[MAX_SPHERES];
+Light lights[MAX_LIGHTS];
+double ambient_light[3];
+
+int num_triangles=0;
+int num_spheres=0;
+int num_lights=0;
+
 struct Ray
 {
     point origin;
@@ -179,14 +159,14 @@ struct Ray
     float check_sphere_intersection (Sphere sphere1){
         //(x0 + xd t - xc)2 + (y0 + yd t - yc)2 + (z0 + zd t - zc)2 - r2 = 0
         //Simplifies to at2 + bt + c = 0
-            //a = xd2 + yd2+ zd2 = 1
-            //b = 2(xd(x0-xc)+yd(y0-yc)+zd(z0-zc))
-            //c = (x0-xc)2 + (y0-yc)2 +(z0-zc)2 - r2
+        //a = xd2 + yd2+ zd2 = 1
+        //b = 2(xd(x0-xc)+yd(y0-yc)+zd(z0-zc))
+        //c = (x0-xc)2 + (y0-yc)2 +(z0-zc)2 - r2
         
         float b, c;
         b = 2*((direction.x * (origin.x - sphere1.position[0])) +
-            (direction.y * (origin.y - sphere1.position[1])) +
-            (direction.z * (origin.z - sphere1.position[2])));
+               (direction.y * (origin.y - sphere1.position[1])) +
+               (direction.z * (origin.z - sphere1.position[2])));
         c = pow(origin.x-sphere1.position[0], 2) + pow(origin.y-sphere1.position[1], 2) + pow(origin.z-sphere1.position[2], 2) - pow(sphere1.radius, 2);
         
         //Solve to get t0, t1
@@ -202,13 +182,13 @@ struct Ray
             return fmax(t0, t1);
     }
     
-    float check_triangle_intersection (Triangle triangle1){
+    bool check_triangle_intersection (Triangle triangle1, color &illumination){
         //Check if ray intersects triangle plane
         
         point A(triangle1.v[0].position[0], triangle1.v[0].position[1], triangle1.v[0].position[2]);
         point B(triangle1.v[1].position[0], triangle1.v[1].position[1], triangle1.v[1].position[2]);
         point C(triangle1.v[2].position[0], triangle1.v[2].position[1], triangle1.v[2].position[2]);
-
+        
         //Normal
         vector cross = point::cross_product(B-A, C-A);
         vector normal = cross;
@@ -222,22 +202,21 @@ struct Ray
          t = - (P0 .  N + d) / (V . n)
          
          t = n . (v0 - p0) / n . (p1-p0)
-        
+         
          if n . d = 0, no intersection
          if t <= 0 intersection is behind ray origin
-        */
+         */
         
         if (vector::dot_product(normal, direction) == 0)
-            return -1;
+            return false;
         
-        //float t = (vector::dot_product(normal, origin) + d) / (vector::dot_product(normal, direction));
         float t = vector::dot_product(normal, A-origin) / vector::dot_product(normal, direction);
         
         if (t < 0)
-            return -1;
+            return false;
         
         vector intersection = origin + (direction * t);
-
+        
         
         /*
          Now we have 3 points instead of 2
@@ -253,26 +232,75 @@ struct Ray
          */
         
         float alpha,beta,gamma;
-       
-
+        
+        
         alpha = triangle1.compute_area(intersection, B, C) / triangle1.compute_area(A, B, C);
         beta = triangle1.compute_area(A, intersection, C) / triangle1.compute_area(A, B, C);
         gamma = triangle1.compute_area(A, B, intersection) / triangle1.compute_area(A, B, C);
-        if (0 <= alpha && alpha <= 1 && 0 <= beta && beta <= 1 && 0 <= gamma && gamma <= 1)
-            return 1;
+        if (0 <= alpha && alpha <= 1 && 0 <= beta && beta <= 1 && 0 <= gamma && gamma <= 1){
+            illumination = light_calculation(triangle1, intersection, alpha, beta, gamma);
+//            cout << illumination.rgb[0] << endl;
+//            cout << illumination.rgb[1] << endl;
+//            cout << illumination.rgb[2] << endl << endl;
+//            cout.flush();
+            return true;
+        }
         else
-            return -1;
+            return false;
     }
     
+    color light_calculation (Triangle &t1, point intersection, float alpha, float beta, float gamma){
+        
+        color illumination;
+        for (int rgb = 0; rgb < 3; rgb++){
+            
+            float diffuse = t1.v[0].color_diffuse[rgb]*alpha
+            + t1.v[1].color_diffuse[rgb]*beta
+            + t1.v[2].color_diffuse[rgb]*gamma;
+            
+            float specular = t1.v[0].color_specular[rgb]*alpha
+            + t1.v[1].color_specular[rgb]*beta
+            + t1.v[2].color_specular[rgb]*gamma;
+            
+            float shininess = t1.v[0].shininess*alpha
+            + t1.v[1].shininess*beta
+            + t1.v[2].shininess*gamma;
+            
+            //interpolated normal
+            vector normal(t1.v[0].normal[0]*alpha + t1.v[1].normal[0]*beta + t1.v[2].normal[0]*gamma,
+                          t1.v[0].normal[1]*alpha + t1.v[1].normal[1]*beta + t1.v[2].normal[1]*gamma,
+                          t1.v[0].normal[2]*alpha + t1.v[1].normal[2]*beta + t1.v[2].normal[2]*gamma);
+            normal.normalize();
+            
+            vector viewer = direction;
+            
+            //illumination value
+            float light;
+            
+            
+            //for each light source
+            for (int i = 0; i < num_lights; i++){
+                //unit vector to light
+                vector l(lights[i].position[0] - intersection.x,
+                         lights[i].position[1] - intersection.y,
+                         lights[i].position[2] - intersection.z);
+                l.normalize();
+                
+                vector reflected = l - (normal * 2 * vector::dot_product(l, normal));
+                reflected.normalize();
+                
+                // I = lightColor * (kd * (L dot N) + ks * (R dot V) ^ sh)
+                
+                light  += lights[i].color[rgb] * (diffuse * (vector::dot_product(l, normal)) + specular * (pow(vector::dot_product(reflected, viewer), shininess)));
+            }
+            
+            if (light > 1)
+                light = 1;
+            illumination.rgb[rgb] = light * 256;
+        }
+        return illumination;
+    }
 };
-Triangle triangles[MAX_TRIANGLES];
-Sphere spheres[MAX_SPHERES];
-Light lights[MAX_LIGHTS];
-double ambient_light[3];
-
-int num_triangles=0;
-int num_spheres=0;
-int num_lights=0;
 
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
@@ -313,7 +341,7 @@ void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b
 void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
 {
     point camera (0, 0, 0);
-   
+    
     //Transform screen to world space
     //Aspect ratio
     float a = WIDTH/HEIGHT;
@@ -322,15 +350,10 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     float scaleY = tan(fov/2);
     float yVal = (float) y/HEIGHT;
     point screen(scaleX - (2 * xVal * scaleX), scaleY - (2 * yVal * scaleY), -1);
-    point screen2 = screen;
-    screen2.z = -3;
     vector direction = vector::determine_vector(camera, screen);
     Ray r1(screen, direction);
+    color color_val;
     
-    if (screen.x > -0.5 && screen.y > 0.5){
-        
-    }
-
     bool intersects = false;
     //For every object in the scene
     //Check spheres
@@ -344,19 +367,20 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     //Check Triangles
     for (int i = 0; i < num_triangles; i++){
         //If they intersect
-        if (r1.check_triangle_intersection(triangles[i]) >= 0){
+        if (r1.check_triangle_intersection(triangles[i], color_val)){
             //Plot Object's Pixel
             intersects = true;
         }
     }
-    if (intersects)
-         plot_pixel_display(x,y,256.0,0.0,0.0);
+    if (intersects) {
+        plot_pixel_display(x,y,color_val.rgb[0],color_val.rgb[1],color_val.rgb[2]);
+    }
     else
         plot_pixel_display(x,y,0.0,0.0,0.0);
     
     
-   // if(mode == MODE_JPEG)
-     //   plot_pixel_jpeg(x,y,r,g,b);
+    // if(mode == MODE_JPEG)
+    //   plot_pixel_jpeg(x,y,r,g,b);
 }
 
 void save_jpg()
@@ -477,7 +501,7 @@ int loadScene(char *argv)
                 printf("too many spheres, you should increase MAX_SPHERES!\n");
                 exit(0);
             }
-             spheres[num_spheres++] = s;
+            spheres[num_spheres++] = s;
         }
         else if(strcasecmp(type,"light")==0)
         {
@@ -533,7 +557,7 @@ void idle()
 int main (int argc, char ** argv)
 {
     if (argc<2 || argc > 3)
-    {  
+    {
         printf ("usage: %s <scenefile> [jpegname]\n", argv[0]);
         exit(0);
     }
