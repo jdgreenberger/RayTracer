@@ -156,7 +156,7 @@ struct Ray
         origin = p; direction = v;
     }
     
-    float check_sphere_intersection (Sphere sphere1){
+    float check_sphere_intersection (Sphere sphere1, color &illumination, float zBuffer){
         //(x0 + xd t - xc)2 + (y0 + yd t - yc)2 + (z0 + zd t - zc)2 - r2 = 0
         //Simplifies to at2 + bt + c = 0
         //a = xd2 + yd2+ zd2 = 1
@@ -177,12 +177,16 @@ struct Ray
         t0 = (-b + sqrt(pow(b, 2) - 4*c))/2;
         t1 = (-b - sqrt(pow(b, 2) - 4*c))/2;
         if (t0 < 0 && t1 < 0)
-            return -1;
-        else
-            return fmax(t0, t1);
+            return false;
+        else {
+            float t = fmax(t0, t1);
+            point intersection (origin.x + direction.x * t, origin.y + direction.y * t, origin.z + direction.z * t) ;
+            illumination = light_calculation(sphere1, intersection);
+            return true;
+        }
     }
     
-    bool check_triangle_intersection (Triangle triangle1, color &illumination){
+    bool check_triangle_intersection (Triangle triangle1, color &illumination, float zBuffer){
         //Check if ray intersects triangle plane
         
         point A(triangle1.v[0].position[0], triangle1.v[0].position[1], triangle1.v[0].position[2]);
@@ -216,6 +220,11 @@ struct Ray
             return false;
         
         vector intersection = origin + (direction * t);
+        if (intersection.z < zBuffer)
+            return false;
+        else
+            zBuffer = intersection.z;
+            
         
         
         /*
@@ -309,6 +318,62 @@ struct Ray
         }
         return illumination;
     }
+    
+    color light_calculation (Sphere s1, point intersection){
+        
+        color illumination;
+       
+        //normal
+        vector normal (s1.position[0] - intersection.x, s1.position[1] - intersection.y, s1.position[2] - intersection.z);
+        normal.normalize();
+        
+        //vector viewer (-direction.x, -direction.y, -direction.z);
+        vector viewer = direction;
+        
+        float shininess = s1.shininess;
+        
+        for (int rgb = 0; rgb < 3; rgb++){
+            
+            float diffuse = s1.color_diffuse[rgb];
+            float specular = s1.color_specular[rgb];
+            
+            //illumination value
+            float light = 0;
+            
+            //for each light source
+            for (int i = 0; i < num_lights; i++){
+                //unit vector to light
+                vector l(lights[i].position[0] - intersection.x,
+                         lights[i].position[1] - intersection.y,
+                         lights[i].position[2] - intersection.z);
+                
+                l.normalize();
+                
+                vector reflected = (normal * 2 * vector::dot_product(l, normal)) - l;
+                reflected.normalize();
+                
+                // I = lightColor * (kd * (L dot N) + ks * (R dot V) ^ sh)
+                
+                float dif_scalar = vector::dot_product(l, normal);
+                if (dif_scalar < 0)
+                    dif_scalar = 0;
+                float spec_scalar = vector::dot_product(reflected, viewer);
+                if (spec_scalar < 0)
+                    spec_scalar = 0;
+                
+                light  += lights[i].color[rgb] * ((diffuse * dif_scalar) + specular * (pow(spec_scalar, shininess)));
+            }
+            
+            //add global ambient light
+            light += ambient_light[rgb];
+            
+            if (light > 1)
+                light = 1;
+            
+            illumination.rgb[rgb] = light * 255;
+        }
+        return illumination;
+    }
 };
 
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
@@ -362,13 +427,14 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     vector direction = vector::determine_vector(camera, screen);
     Ray r1(screen, direction);
     color color_val;
+    float zBuffer = -100;
     
     bool intersects = false;
     //For every object in the scene
     //Check spheres
     for (int i = 0; i < num_spheres; i++){
         //If they intersect
-        if (r1.check_sphere_intersection(spheres[i]) >= 0){
+        if (r1.check_sphere_intersection(spheres[i], color_val, zBuffer)){
             //Plot Object's Pixel
             intersects = true;
         }
@@ -376,7 +442,7 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     //Check Triangles
     for (int i = 0; i < num_triangles; i++){
         //If they intersect
-        if (r1.check_triangle_intersection(triangles[i], color_val)){
+        if (r1.check_triangle_intersection(triangles[i], color_val, zBuffer)){
             //Plot Object's Pixel
             intersects = true;
         }
