@@ -239,10 +239,6 @@ struct Ray
         gamma = triangle1.compute_area(A, B, intersection) / triangle1.compute_area(A, B, C);
         if (0 <= alpha && alpha <= 1 && 0 <= beta && beta <= 1 && 0 <= gamma && gamma <= 1){
             illumination = light_calculation(triangle1, intersection, alpha, beta, gamma);
-//            cout << illumination.rgb[0] << endl;
-//            cout << illumination.rgb[1] << endl;
-//            cout << illumination.rgb[2] << endl << endl;
-//            cout.flush();
             return true;
         }
         else
@@ -252,6 +248,20 @@ struct Ray
     color light_calculation (Triangle &t1, point intersection, float alpha, float beta, float gamma){
         
         color illumination;
+        
+        float shininess = t1.v[0].shininess*alpha
+        + t1.v[1].shininess*beta
+        + t1.v[2].shininess*gamma;
+        
+        //interpolated normal
+        vector normal(t1.v[0].normal[0]*alpha + t1.v[1].normal[0]*beta + t1.v[2].normal[0]*gamma,
+                      t1.v[0].normal[1]*alpha + t1.v[1].normal[1]*beta + t1.v[2].normal[1]*gamma,
+                      t1.v[0].normal[2]*alpha + t1.v[1].normal[2]*beta + t1.v[2].normal[2]*gamma);
+        normal.normalize();
+        
+        //vector viewer (-direction.x, -direction.y, -direction.z);
+        vector viewer = direction;
+        
         for (int rgb = 0; rgb < 3; rgb++){
             
             float diffuse = t1.v[0].color_diffuse[rgb]*alpha
@@ -262,21 +272,8 @@ struct Ray
             + t1.v[1].color_specular[rgb]*beta
             + t1.v[2].color_specular[rgb]*gamma;
             
-            float shininess = t1.v[0].shininess*alpha
-            + t1.v[1].shininess*beta
-            + t1.v[2].shininess*gamma;
-            
-            //interpolated normal
-            vector normal(t1.v[0].normal[0]*alpha + t1.v[1].normal[0]*beta + t1.v[2].normal[0]*gamma,
-                          t1.v[0].normal[1]*alpha + t1.v[1].normal[1]*beta + t1.v[2].normal[1]*gamma,
-                          t1.v[0].normal[2]*alpha + t1.v[1].normal[2]*beta + t1.v[2].normal[2]*gamma);
-            normal.normalize();
-            
-            vector viewer = direction;
-            
             //illumination value
-            float light;
-            
+            float light = 0;
             
             //for each light source
             for (int i = 0; i < num_lights; i++){
@@ -284,19 +281,31 @@ struct Ray
                 vector l(lights[i].position[0] - intersection.x,
                          lights[i].position[1] - intersection.y,
                          lights[i].position[2] - intersection.z);
+
                 l.normalize();
                 
-                vector reflected = l - (normal * 2 * vector::dot_product(l, normal));
+                vector reflected = (normal * 2 * vector::dot_product(l, normal)) - l;
                 reflected.normalize();
                 
                 // I = lightColor * (kd * (L dot N) + ks * (R dot V) ^ sh)
                 
-                light  += lights[i].color[rgb] * (diffuse * (vector::dot_product(l, normal)) + specular * (pow(vector::dot_product(reflected, viewer), shininess)));
+                float dif_scalar = vector::dot_product(l, normal);
+                    if (dif_scalar < 0)
+                        dif_scalar = 0;
+                float spec_scalar = vector::dot_product(reflected, viewer);
+                    if (spec_scalar < 0)
+                        spec_scalar = 0;
+                
+                light  += lights[i].color[rgb] * ((diffuse * dif_scalar) + specular * (pow(spec_scalar, shininess)));
             }
             
+            //add global ambient light
+            light += ambient_light[rgb];
+            
             if (light > 1)
-                light = 1;
-            illumination.rgb[rgb] = light * 256;
+               light = 1;
+                
+            illumination.rgb[rgb] = light * 255;
         }
         return illumination;
     }
@@ -349,7 +358,7 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     float xVal = (float) x/WIDTH;
     float scaleY = tan(fov/2);
     float yVal = (float) y/HEIGHT;
-    point screen(scaleX - (2 * xVal * scaleX), scaleY - (2 * yVal * scaleY), -1);
+    point screen(scaleX - (2 * xVal * scaleX), scaleY - (2 * yVal * scaleY), -2);
     vector direction = vector::determine_vector(camera, screen);
     Ray r1(screen, direction);
     color color_val;
