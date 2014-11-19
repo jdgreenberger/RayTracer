@@ -59,7 +59,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "$(SRCROOT)/screenfile.txt"
+            argument = "$(SRCROOT)/RayTracer/screenfile.txt"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

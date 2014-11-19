@@ -13,6 +13,7 @@
 #include <string.h>
 #include <math.h>
 #include <iostream>
+#include <float.h>
 using namespace std;
 
 #define MAX_TRIANGLES 2000
@@ -36,7 +37,7 @@ int mode=MODE_DISPLAY;
 unsigned char buffer[HEIGHT][WIDTH][3];
 
 struct color {
-    float rgb [3] = {0.0, 0.0, 0.0};
+    float rgb [3] = {1.0, 1.0, 1.0};
 };
 
 struct point {
@@ -86,13 +87,8 @@ struct point {
         this->z = this->z/vectorLength;
     }
     
-    static point determine_vector (point p1, point p2){
-        point v;
-        v.x = p2.x-p1.x;
-        v.y = p2.y-p1.y;
-        v.z = p2.z-p1.z;
-        v.normalize();
-        return v;
+    static float length (point p){
+        return sqrt(dot_product(p, p));
     }
     
     void print (){
@@ -156,37 +152,61 @@ struct Ray
         origin = p; direction = v;
     }
     
-    float check_sphere_intersection (Sphere sphere1, color &illumination, float zBuffer){
+    float check_sphere_intersection (Sphere sphere1, color &illumination, float &zBuffer, float stop_limit){
         //(x0 + xd t - xc)2 + (y0 + yd t - yc)2 + (z0 + zd t - zc)2 - r2 = 0
         //Simplifies to at2 + bt + c = 0
         //a = xd2 + yd2+ zd2 = 1
         //b = 2(xd(x0-xc)+yd(y0-yc)+zd(z0-zc))
         //c = (x0-xc)2 + (y0-yc)2 +(z0-zc)2 - r2
         
+        //Check if point is inside sphere
+        point center (sphere1.position[0], sphere1.position[1], sphere1.position[2]);
+        if (vector::length(origin-center) < sphere1.radius)
+            return false;
+        
         float b, c;
-        b = 2*((direction.x * (origin.x - sphere1.position[0])) +
-               (direction.y * (origin.y - sphere1.position[1])) +
-               (direction.z * (origin.z - sphere1.position[2])));
-        c = pow(origin.x-sphere1.position[0], 2) + pow(origin.y-sphere1.position[1], 2) + pow(origin.z-sphere1.position[2], 2) - pow(sphere1.radius, 2);
+        b = 2 * vector::dot_product(direction, origin-center);
+        c = vector::dot_product(origin - center, origin - center) - pow(sphere1.radius, 2);
         
         //Solve to get t0, t1
         //t0,1 = (-b +/- sqrt(b2-4c))/2
         //If t0, t1 > 0, return min (t0, t1)
         
+        if (b*b - (4 * c) < 0)
+            return false;
+        
         float t0, t1;
-        t0 = (-b + sqrt(pow(b, 2) - 4*c))/2;
-        t1 = (-b - sqrt(pow(b, 2) - 4*c))/2;
+        t0 = (-b + sqrt(b * b - 4*c))/2;
+        t1 = (-b - sqrt(b * b - 4*c))/2;
+        
         if (t0 < 0 && t1 < 0)
             return false;
-        else {
-            float t = fmax(t0, t1);
-            point intersection (origin.x + direction.x * t, origin.y + direction.y * t, origin.z + direction.z * t) ;
-            illumination = light_calculation(sphere1, intersection);
-            return true;
+        float t = fmin(t0, t1);
+        
+        if (t < 0)
+            return false;
+        
+        point intersection = origin + direction*t;
+        
+        //Doing shadow test
+        if (stop_limit != FLT_MAX){
+            //Object is in front of light
+            if (vector::length(origin-intersection) <= stop_limit)
+                return true;
+            else
+                return false;
         }
+        
+        if (intersection.z < zBuffer)
+            return false;
+        else
+            zBuffer = intersection.z;
+        
+        illumination = light_calculation(sphere1, intersection);
+        return true;
     }
     
-    bool check_triangle_intersection (Triangle triangle1, color &illumination, float zBuffer){
+    bool check_triangle_intersection (Triangle triangle1, color &illumination, float &zBuffer, float stop_limit){
         //Check if ray intersects triangle plane
         
         point A(triangle1.v[0].position[0], triangle1.v[0].position[1], triangle1.v[0].position[2]);
@@ -198,12 +218,10 @@ struct Ray
         vector normal = cross;
         normal.normalize();
         
-        float d = vector::dot_product(normal, A);
+        float d = - vector::dot_product(normal, A);
         
         /*
          Plane: 0 = p . N + d
-         
-         t = - (P0 .  N + d) / (V . n)
          
          t = n . (v0 - p0) / n . (p1-p0)
          
@@ -214,18 +232,12 @@ struct Ray
         if (vector::dot_product(normal, direction) == 0)
             return false;
         
-        float t = vector::dot_product(normal, A-origin) / vector::dot_product(normal, direction);
+        float t = - (vector::dot_product(normal, origin) + d) /  vector::dot_product(normal, direction);
         
         if (t < 0)
             return false;
         
-        vector intersection = origin + (direction * t);
-        if (intersection.z < zBuffer)
-            return false;
-        else
-            zBuffer = intersection.z;
-            
-        
+        point intersection = origin + (direction * t);
         
         /*
          Now we have 3 points instead of 2
@@ -242,11 +254,30 @@ struct Ray
         
         float alpha,beta,gamma;
         
-        
-        alpha = triangle1.compute_area(intersection, B, C) / triangle1.compute_area(A, B, C);
-        beta = triangle1.compute_area(A, intersection, C) / triangle1.compute_area(A, B, C);
-        gamma = triangle1.compute_area(A, B, intersection) / triangle1.compute_area(A, B, C);
-        if (0 <= alpha && alpha <= 1 && 0 <= beta && beta <= 1 && 0 <= gamma && gamma <= 1){
+        float total_area = vector::length(cross) / 2;
+        alpha = triangle1.compute_area(intersection, B, C) / total_area;
+        beta = triangle1.compute_area(A, intersection, C) / total_area;
+        gamma = triangle1.compute_area(A, B, intersection) / total_area;
+        if (-0.001 <= alpha && alpha <= 1.001 && -0.001 <= beta && beta <= 1.001 && -0.001 <= gamma && gamma <= 1.001){
+            if (fabs(1 - (alpha + beta + gamma)) > 0.001)
+                return false;
+            
+            //Doing shadow test
+            if (stop_limit < FLT_MAX){
+                //Object is in front of light
+                if (vector::length(origin-intersection) <= stop_limit) {
+                    return true;
+                }
+                else
+                    return false;
+            }
+            
+            //Check Zbuffer
+            if (intersection.z < zBuffer)
+                return true;
+            else
+                zBuffer = intersection.z;
+            
             illumination = light_calculation(triangle1, intersection, alpha, beta, gamma);
             return true;
         }
@@ -267,9 +298,8 @@ struct Ray
                       t1.v[0].normal[1]*alpha + t1.v[1].normal[1]*beta + t1.v[2].normal[1]*gamma,
                       t1.v[0].normal[2]*alpha + t1.v[1].normal[2]*beta + t1.v[2].normal[2]*gamma);
         normal.normalize();
-        
-        //vector viewer (-direction.x, -direction.y, -direction.z);
-        vector viewer = direction;
+    
+        vector viewer (-direction.x, -direction.y, -direction.z);
         
         for (int rgb = 0; rgb < 3; rgb++){
             
@@ -280,62 +310,6 @@ struct Ray
             float specular = t1.v[0].color_specular[rgb]*alpha
             + t1.v[1].color_specular[rgb]*beta
             + t1.v[2].color_specular[rgb]*gamma;
-            
-            //illumination value
-            float light = 0;
-            
-            //for each light source
-            for (int i = 0; i < num_lights; i++){
-                //unit vector to light
-                vector l(lights[i].position[0] - intersection.x,
-                         lights[i].position[1] - intersection.y,
-                         lights[i].position[2] - intersection.z);
-
-                l.normalize();
-                
-                vector reflected = (normal * 2 * vector::dot_product(l, normal)) - l;
-                reflected.normalize();
-                
-                // I = lightColor * (kd * (L dot N) + ks * (R dot V) ^ sh)
-                
-                float dif_scalar = vector::dot_product(l, normal);
-                    if (dif_scalar < 0)
-                        dif_scalar = 0;
-                float spec_scalar = vector::dot_product(reflected, viewer);
-                    if (spec_scalar < 0)
-                        spec_scalar = 0;
-                
-                light  += lights[i].color[rgb] * ((diffuse * dif_scalar) + specular * (pow(spec_scalar, shininess)));
-            }
-            
-            //add global ambient light
-            light += ambient_light[rgb];
-            
-            if (light > 1)
-               light = 1;
-                
-            illumination.rgb[rgb] = light * 255;
-        }
-        return illumination;
-    }
-    
-    color light_calculation (Sphere s1, point intersection){
-        
-        color illumination;
-       
-        //normal
-        vector normal (s1.position[0] - intersection.x, s1.position[1] - intersection.y, s1.position[2] - intersection.z);
-        normal.normalize();
-        
-        //vector viewer (-direction.x, -direction.y, -direction.z);
-        vector viewer = direction;
-        
-        float shininess = s1.shininess;
-        
-        for (int rgb = 0; rgb < 3; rgb++){
-            
-            float diffuse = s1.color_diffuse[rgb];
-            float specular = s1.color_specular[rgb];
             
             //illumination value
             float light = 0;
@@ -361,7 +335,9 @@ struct Ray
                 if (spec_scalar < 0)
                     spec_scalar = 0;
                 
+                 if (!in_shadow(intersection, lights[i])) {
                 light  += lights[i].color[rgb] * ((diffuse * dif_scalar) + specular * (pow(spec_scalar, shininess)));
+                 }
             }
             
             //add global ambient light
@@ -374,6 +350,111 @@ struct Ray
         }
         return illumination;
     }
+    
+    color light_calculation (Sphere s1, point intersection){
+        
+        bool reflective = true;
+        float z = intersection.z;
+        int reflection_count = 0;
+        color illumination;
+        
+        //normal
+        vector normal(-s1.position[0] + intersection.x, -s1.position[1] + intersection.y, -s1.position[2] + intersection.z);
+        normal.normalize();
+        
+        vector viewer (-direction.x, -direction.y, -direction.z);
+        
+        float shininess = s1.shininess;
+        vector reflected;
+        
+        for (int rgb = 0; rgb < 3; rgb++){
+            
+            float diffuse = s1.color_diffuse[rgb];
+            float specular = s1.color_specular[rgb];
+            
+            //illumination value
+            float light = 0;
+            
+            //for each light source
+            for (int i = 0; i < num_lights; i++){
+                //unit vector to light
+                vector l(lights[i].position[0] - intersection.x,
+                         lights[i].position[1] - intersection.y,
+                         lights[i].position[2] - intersection.z);
+                
+                l.normalize();
+                
+                reflected = (normal * 2 * vector::dot_product(l, normal)) - l;
+                reflected.normalize();
+                
+                // I = lightColor * (kd * (L dot N) + ks * (R dot V) ^ sh)
+                
+                float dif_scalar = vector::dot_product(l, normal);
+                if (dif_scalar < 0)
+                    dif_scalar = 0;
+                float spec_scalar = vector::dot_product(reflected, viewer);
+                if (spec_scalar < 0)
+                    spec_scalar = 0;
+                
+                if (!in_shadow(intersection, lights[i])) {
+                    light  += lights[i].color[rgb] * ((diffuse * dif_scalar) + specular * (pow(spec_scalar, shininess)));
+                }
+            }
+            
+            //add global ambient light
+            light += ambient_light[rgb];
+                
+            if (light > 1)
+                light = 1;
+            
+            illumination.rgb[rgb] = light * 255;
+//            if (reflective && reflection_count < 2){
+//                //New Ray
+//                intersection = intersection + reflected * 0.01;
+//                Ray r1 (intersection, reflected);
+//                //Check spheres
+//                for (int i = 0; i < num_spheres; i++){
+//                    r1.check_sphere_intersection(spheres[i], illumination, z, FLT_MAX);
+//                }
+//                //Check Triangles
+//                for (int i = 0; i < num_triangles; i++){
+//                    r1.check_triangle_intersection(triangles[i], illumination, z, FLT_MAX);
+//                }
+//                reflection_count++;
+//            }
+        }
+        return illumination;
+    }
+    
+    bool in_shadow (point intersection, Light light){
+        
+        //Make sure doesn't intersection with itself
+        vector lightV (light.position[0], light.position[1], light.position[2]);
+        vector direction = lightV - intersection;
+        direction.normalize();
+        
+        intersection = intersection + direction * 0.01;
+        Ray r1 (intersection, direction);
+        color c;
+        float z = 50;
+        
+        //Check spheres
+        for (int i = 0; i < num_spheres; i++){
+            //If they intersect
+            if (r1.check_sphere_intersection(spheres[i], c, z, vector::length(lightV-intersection))){
+                return true;
+            }
+        }
+        //Check Triangles
+        for (int i = 0; i < num_triangles; i++){
+            //If they intersect
+            if (r1.check_triangle_intersection(triangles[i], c, z, vector::length(lightV-intersection))){
+                return true;
+            }
+        }
+        return false;
+    }
+    
 };
 
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
@@ -385,18 +466,22 @@ void draw_scene()
 {
     unsigned int x,y;
     //simple output
+    glPointSize(2.0);
+    glBegin(GL_POINTS);
     for(x=0; x<WIDTH; x++)
     {
-        glPointSize(2.0);
-        glBegin(GL_POINTS);
         for(y=0;y < HEIGHT;y++)
         {
-            plot_pixel(x,y,x%256,y%256,(x+y)%256);
+            plot_pixel(x, y, x%256,y%256,(x+y)%256);
         }
-        glEnd();
-        glFlush();
     }
+    glEnd();
+    glFlush();
     printf("Done!\n"); fflush(stdout);
+    
+    while(true){
+        
+    }
 }
 
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b)
@@ -414,17 +499,21 @@ void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b
 
 void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
 {
-    point camera (0, 0, 0);
-    
+    if (x == 500 && y == 300)
+    {
+        
+    }
     //Transform screen to world space
     //Aspect ratio
-    float a = WIDTH/HEIGHT;
-    float scaleX = a * tan(fov/2);
+    float fovRadians = fov * M_PI/180;
+    float a = ((float) WIDTH)/ ((float) HEIGHT);
+    float scaleX = a * tan(fovRadians/2);
     float xVal = (float) x/WIDTH;
-    float scaleY = tan(fov/2);
+    float scaleY = tan(fovRadians/2);
     float yVal = (float) y/HEIGHT;
-    point screen(scaleX - (2 * xVal * scaleX), scaleY - (2 * yVal * scaleY), -2);
-    vector direction = vector::determine_vector(camera, screen);
+    point screen(-scaleX + (2 * xVal * scaleX), -scaleY + (2 * yVal * scaleY), -1);
+    vector direction = screen;
+    direction.normalize();
     Ray r1(screen, direction);
     color color_val;
     float zBuffer = -100;
@@ -434,7 +523,7 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     //Check spheres
     for (int i = 0; i < num_spheres; i++){
         //If they intersect
-        if (r1.check_sphere_intersection(spheres[i], color_val, zBuffer)){
+        if (r1.check_sphere_intersection(spheres[i], color_val, zBuffer, FLT_MAX)){
             //Plot Object's Pixel
             intersects = true;
         }
@@ -442,7 +531,7 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
     //Check Triangles
     for (int i = 0; i < num_triangles; i++){
         //If they intersect
-        if (r1.check_triangle_intersection(triangles[i], color_val, zBuffer)){
+        if (r1.check_triangle_intersection(triangles[i], color_val, zBuffer, FLT_MAX)){
             //Plot Object's Pixel
             intersects = true;
         }
@@ -451,7 +540,9 @@ void plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)
         plot_pixel_display(x,y,color_val.rgb[0],color_val.rgb[1],color_val.rgb[2]);
     }
     else
-        plot_pixel_display(x,y,0.0,0.0,0.0);
+        //plot_pixel_display(x,y, 0,0,0);
+        plot_pixel_display(x,y,256.0, 256.0, 256.0);
+    
     
     
     // if(mode == MODE_JPEG)
@@ -516,7 +607,6 @@ void parse_shi(FILE*file,double *shi)
 
 int loadScene(char *argv)
 {
-    argv = "/Users/joshgreenberger/Documents/Class Material/Senior/Graphics/assign3/RayTracer/screenfile.txt";
     FILE *file = fopen(argv,"r");
     if (file == NULL) {
         printf ("Can't open file.\n");
@@ -541,7 +631,6 @@ int loadScene(char *argv)
         printf("%s\n",type);
         if(strcasecmp(type,"triangle")==0)
         {
-            
             printf("found triangle\n");
             int j;
             
@@ -602,7 +691,8 @@ int loadScene(char *argv)
 
 void display()
 {
-    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glutSwapBuffers(); // double buffer flush
 }
 
 void init()
@@ -645,7 +735,7 @@ int main (int argc, char ** argv)
         mode = MODE_DISPLAY;
     
     glutInit(&argc,argv);
-    loadScene(argv[2]);
+    loadScene(argv[1]);
     
     glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
     glutInitWindowPosition(0,0);
