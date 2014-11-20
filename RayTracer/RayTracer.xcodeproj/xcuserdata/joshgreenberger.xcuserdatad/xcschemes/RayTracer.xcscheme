@@ -63,7 +63,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/joshgreenberger/Documents/Class Material/Senior/Graphics/assign3/RayTracer/test1.scene"
+            argument = "1"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>

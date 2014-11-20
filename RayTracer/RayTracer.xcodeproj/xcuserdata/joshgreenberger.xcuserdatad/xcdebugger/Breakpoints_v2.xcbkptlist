@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "438124251.555217"
+            timestampString = "438144651.039788"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "680"
-            endingLineNumber = "680"
+            startingLineNumber = "744"
+            endingLineNumber = "744"
             landmarkName = "loadScene(char *argv)"
             landmarkType = "7">
          </BreakpointContent>
@@ -26,11 +26,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "438066149.824896"
+            timestampString = "438142991.82871"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "289"
-            endingLineNumber = "289">
+            startingLineNumber = "290"
+            endingLineNumber = "290">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -40,11 +40,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "438066149.824896"
+            timestampString = "438142991.82871"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "324"
-            endingLineNumber = "324">
+            startingLineNumber = "346"
+            endingLineNumber = "346">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -54,11 +54,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "438124251.555217"
+            timestampString = "438144651.039788"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "520"
-            endingLineNumber = "520"
+            startingLineNumber = "575"
+            endingLineNumber = "575"
             landmarkName = "plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)"
             landmarkType = "7">
          </BreakpointContent>
@@ -70,27 +70,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracer/main.cpp"
-            timestampString = "438124251.555217"
+            timestampString = "438142991.82871"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "432"
-            endingLineNumber = "432">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "RayTracer/main.cpp"
-            timestampString = "438124251.555217"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "504"
-            endingLineNumber = "504"
-            landmarkName = "plot_pixel(int x,int y,unsigned char r,unsigned char g, unsigned char b)"
-            landmarkType = "7">
+            startingLineNumber = "467"
+            endingLineNumber = "467">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
